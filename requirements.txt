@@ -3,3 +3,6 @@ python-multipart~=0.0.20
 uvicorn~=0.35.0
 aiofiles~=24.1.0
 emoji~=2.14.1
+stopwordsiso~=0.6.1
+langdetect~=1.0.9
+regex~=2024.11.6
