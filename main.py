@@ -6,6 +6,10 @@ import uuid
 import aiofiles
 import json
 
+from collections import Counter, defaultdict
+
+import emoji
+
 import zipfile
 
 from typing import Annotated
@@ -19,7 +23,7 @@ async def aiosave_file(src: UploadFile, dst: Path) -> None:
             await out.write(chunk)
     await src.close()
 
-def extract_first_json(zip_path: Path, dest_dir: Path) -> Path | None:
+def unarchive(zip_path: Path, dest_dir: Path) -> Path | None:
     with zipfile.ZipFile(zip_path) as zf:
         for member in zf.namelist():
             if member.lower().endswith(".json"):
@@ -27,9 +31,8 @@ def extract_first_json(zip_path: Path, dest_dir: Path) -> Path | None:
                 return dest_dir / member
     return None
 
-
-@app.post('/upload')
-async def upload_export(file: UploadFile, req: Request) -> None:
+@app.post('/analyze')
+async def analyze_export(file: UploadFile) -> None:
 
     if not file.content_type in ['application/zip', 'application/json']:
         raise HTTPException(
@@ -48,7 +51,7 @@ async def upload_export(file: UploadFile, req: Request) -> None:
 
     json_path: Path | None
     if src_path.suffix.lower() == ".zip":
-        json_path = extract_first_json(src_path, work_dir)
+        json_path = unarchive(src_path, work_dir)
         if not json_path:
             background_tasks.add_task(shutil.rmtree, work_dir, ignore_errors=True)
             raise HTTPException(
@@ -59,9 +62,34 @@ async def upload_export(file: UploadFile, req: Request) -> None:
         json_path = src_path
 
     with open(json_path) as file:
-        print(json.load(file))
+        data = json.load(file)
+    
+    messages = data.get('messages', [])
+    
 
-    return file
+    author_message_counter: Counter[str] = Counter(
+        m["from"] for m in messages if m.get("type") == "message"
+    )
+    word_counter:  Counter[str] = Counter()
+    emoji_counter: dict[str, Counter[str]] = defaultdict(Counter)
+
+    # most use emoji per user
+    for msg in messages:
+        if not msg.get('text_entities', []):
+            continue
+
+        text_entities = msg['text_entities'][0]
+        author = msg.get('from', 'bruh')
+
+        if text_entities['type'] == 'plain':
+            for item in emoji.emoji_list(text_entities['text']):
+                
+                item_emoji = item['emoji']
+                emoji_counter[author][item_emoji] += 1
+
+
+    return emoji_counter
+    
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=7070)
