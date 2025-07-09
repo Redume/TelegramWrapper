@@ -89,7 +89,7 @@ async def analyze_export(file: UploadFile) -> None:
     author_message_counter: Counter[str] = Counter()
     word_counter:  dict[str, Counter[str]] = defaultdict(Counter)
     emoji_counter: dict[str, Counter[str]] = defaultdict(Counter)
-    #TODO: reactions in message per user
+    reactions_counter: dict[str, Counter[str]] = defaultdict(Counter)
 
     sample_texts = [
         ent.get("text", "")
@@ -110,6 +110,19 @@ async def analyze_export(file: UploadFile) -> None:
         author = msg.get('from', 'Unknown')
 
         author_message_counter[author] += 1
+
+        # reaction on message per user
+        reactions = msg.get('reactions')
+        if reactions:
+
+            for reaction in reactions:
+                if reaction['type'] == 'emoji':
+                    reactions_authors = reaction.get('recent', None)
+                    if not reactions_authors:
+                        continue
+
+                    for reaction_author in reactions_authors:
+                        reactions_counter[reaction_author['from']][reaction['emoji']] += 1
 
         if text_entities['type'] == 'plain':
 
@@ -133,6 +146,7 @@ async def analyze_export(file: UploadFile) -> None:
                 "messages_total": author_message_counter[a],
                 "top_emojis": emoji_counter[a].most_common(10),
                 "top_words":  word_counter[a].most_common(10),
+                "top_reactions": reactions_counter[a].most_common(10)
             }
             for a in author_message_counter
         ],
