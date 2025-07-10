@@ -66,6 +66,7 @@ async def analyze_export(file: UploadFile) -> None:
 
     src_path = work_dir / file.filename
 
+    # save file and unarchive, find result.json
     await aiosave_file(file, src_path)
 
     json_path: Path | None
