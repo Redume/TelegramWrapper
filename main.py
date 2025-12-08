@@ -1,20 +1,20 @@
 import json
 import tempfile
 import uuid
-import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Annotated, Final
+from typing import Final
 
-import aiofiles
 import emoji
 import regex as re
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request, UploadFile, status
+from fastapi import FastAPI, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
-from langdetect import LangDetectException, detect
 from stopwordsiso import has_lang
 from stopwordsiso import stopwords as sw_iso
+
+from utils.file import unarchive, aiosave_file
+from utils.detect_lang import detect_lang
 
 app = FastAPI()
 
@@ -28,31 +28,9 @@ EMOJI_RE = (
 
 PUNCTSYM_RE: Final[re.Pattern[str]] = re.compile(r"[\p{P}\p{S}]", re.UNICODE)
 
-
-async def aiosave_file(src: UploadFile, dst: Path) -> None:
-    async with aiofiles.open(dst, "wb") as out:
-        while chunk := await src.read(64 * 1024):
-            await out.write(chunk)
-    await src.close()
-
-def unarchive(zip_path: Path, dest_dir: Path) -> Path | None:
-    with zipfile.ZipFile(zip_path) as zf:
-        for member in zf.namelist():
-            if member.lower().endswith(".json"):
-                zf.extract(member, path=dest_dir)
-                return dest_dir / member
-    return None
-
-
-def detect_lang(sample: list[str]) -> str:
-    try:
-        return detect(" ".join(sample)) if sample else "unknown"
-    except LangDetectException:
-        return "unknown"
-
 @app.post('/analyze')
 async def analyze_export(file: UploadFile) -> None:
-    if not file.content_type in ['application/zip', 'application/json']:
+    if file.content_type not in ['application/zip', 'application/json']:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, 
             detail='This file type is not supported. Supported extensions: zip, json.'
