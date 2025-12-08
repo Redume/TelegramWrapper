@@ -66,6 +66,7 @@ async def analyze_export(file: UploadFile) -> None:
 
     # counters
     author_message_counter: Counter[str] = Counter()
+    voice_message_author_counter: Counter[str] = Counter()
     word_counter:  dict[str, Counter[str]] = defaultdict(Counter)
     emoji_counter: dict[str, Counter[str]] = defaultdict(Counter)
     reactions_counter: dict[str, Counter[str]] = defaultdict(Counter)
@@ -82,7 +83,11 @@ async def analyze_export(file: UploadFile) -> None:
 
     # analyzing messages
     for msg in messages:
+        author = msg.get('from', 'Unknown')
+
         if not msg.get('text_entities', []):
+            if msg.get('media_type') == 'voice_message':
+                voice_message_author_counter[author] += 1
             continue
 
         text_entities = msg['text_entities'][0]
@@ -123,6 +128,7 @@ async def analyze_export(file: UploadFile) -> None:
             {
                 "name": a,
                 "messages_total": author_message_counter[a],
+                "voice_message_total": voice_message_author_counter[a],
                 "top_emojis": emoji_counter[a].most_common(10),
                 "top_words":  word_counter[a].most_common(10),
                 "top_reactions": reactions_counter[a].most_common(10)
