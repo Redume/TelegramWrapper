@@ -8,7 +8,7 @@ from typing import Final
 import emoji
 import regex as re
 import uvicorn
-from fastapi import FastAPI, HTTPException, UploadFile, status
+from fastapi import FastAPI, HTTPException, UploadFile, status, File, BackgroundTasks
 from fastapi.responses import JSONResponse
 from stopwordsiso import has_lang
 from stopwordsiso import stopwords as sw_iso
@@ -29,7 +29,7 @@ EMOJI_RE = (
 PUNCTSYM_RE: Final[re.Pattern[str]] = re.compile(r"[\p{P}\p{S}]", re.UNICODE)
 
 @app.post('/upload')
-async def _(file: UploadFile) -> None:
+async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> None:
     if file.content_type not in ['application/zip', 'application/json']:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, 
@@ -122,6 +122,7 @@ async def _(file: UploadFile) -> None:
             for token in clean.split():
                 if token and token not in stopset:
                     word_counter[author][token] += 1
+
 
     return JSONResponse({
         "authors": [
