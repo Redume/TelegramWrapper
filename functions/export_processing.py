@@ -53,7 +53,7 @@ def get_reactions(message: dict, stats: Stats) -> None:
                     stats.reactions[reaction_author['from']][reaction['emoji']] += 1
 
 
-def get_emojis(text_entity: dict | None, author: str, stats: Stats, stopset: set[str]) -> None:
+def get_emojis(text_entity: dict | None, author: str, stats: Stats) -> None:
     if not isinstance(text_entity, dict):
         return
 
@@ -68,6 +68,11 @@ def get_emojis(text_entity: dict | None, author: str, stats: Stats, stopset: set
         em = emo.get("emoji")
         if isinstance(em, str) and em:
             stats.emojis[author][em] += 1
+
+def get_word(message: dict, author, stats: Stats, stopset: set[str]) -> None:
+    text = _get_plain_text(message)
+    if not text:
+        return None
 
     clean = EMOJI_RE.sub(" ", text)
     clean = PUNCTSYM_RE.sub(" ", clean)

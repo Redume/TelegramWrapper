@@ -15,7 +15,7 @@ from stopwordsiso import stopwords as sw_iso
 from utils.file import unarchive, aiosave_file
 from utils.detect_lang import detect_lang
 from models.stats_model import Stats
-from functions.export_processing import get_author, get_emojis, get_messages, get_reactions
+from functions.export_processing import get_author, get_emojis, get_messages, get_reactions, get_word
 from functions.collect_messages import collect_messages
 
 app = FastAPI(debug=True)
@@ -77,7 +77,8 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
 
         get_messages(msg, author, stats)
         get_reactions(msg, stats)
-        get_emojis(text_entity, author, stats, stopset)
+        get_emojis(text_entity, author, stats)
+        get_word(msg, author, stats, stopset)
 
     if not stats.messages_total:
         return JSONResponse({
