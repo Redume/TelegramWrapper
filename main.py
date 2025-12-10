@@ -59,7 +59,7 @@ async def _(file: UploadFile) -> None:
     else:
         json_path = src_path
 
-    with open(json_path) as file:
+    with open(json_path, 'r', encoding='utf-8') as file:
         data = json.load(file)
     
     messages = data.get('messages', [])
