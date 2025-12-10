@@ -90,9 +90,18 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
                 "name": a,
                 "messages_total": stats.messages_total[a],
                 "voice_message_total": stats.voice_total[a],
-                "top_emojis": stats.emojis[a].most_common(10),
-                "top_words":  stats.words[a].most_common(10),
-                "top_reactions": stats.reactions[a].most_common(10)
+                "top_emojis": [
+                    {"emoji": e, "value": v}
+                    for e, v in stats.emojis[a].most_common(10)
+                ],
+                "top_words": [
+                    {"word": w, "value": v}
+                    for w, v in stats.words[a].most_common(10)
+                ],
+                "top_reactions": [
+                    {"emoji": e, "value": v}
+                    for e, v in stats.reactions[a].most_common(10)
+                ]
             }
             for a in stats.messages_total
         ],
