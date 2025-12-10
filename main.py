@@ -70,6 +70,9 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
     # analyzing messages
     for msg in messages:
         author = get_author(msg)
+        if not author:
+            continue
+
         text_entity = (msg.get("text_entities") or [None])[0]
 
         get_messages(msg, author, stats)

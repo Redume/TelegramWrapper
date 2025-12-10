@@ -12,9 +12,9 @@ EMOJI_RE = (
 )
 PUNCTSYM_RE: Final[re.Pattern[str]] = re.compile(r"[\p{P}\p{S}]", re.UNICODE)
 
-def get_author(message: dict) -> str:
+def get_author(message: dict) -> str | None:
     author = message.get("from")
-    return str(author).strip() if isinstance(author, str) and author.strip() else 'Unknown'
+    return str(author).strip() if isinstance(author, str) and author.strip() else None
 
 
 def _get_plain_text(message: dict) -> str | None:
