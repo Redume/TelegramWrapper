@@ -5,6 +5,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Final
 
+import shutil
+
 import emoji
 import regex as re
 import uvicorn
@@ -59,8 +61,8 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
     else:
         json_path = src_path
 
-    with open(json_path, 'r', encoding='utf-8') as file:
-        data = json.load(file)
+    with open(json_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
     
     messages = data.get('messages', [])
 
@@ -122,7 +124,6 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
             for token in clean.split():
                 if token and token not in stopset:
                     word_counter[author][token] += 1
-
 
     return JSONResponse({
         "authors": [
