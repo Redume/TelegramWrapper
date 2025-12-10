@@ -53,15 +53,24 @@ def get_reactions(message: dict, stats: Stats) -> None:
                     stats.reactions[reaction_author['from']][reaction['emoji']] += 1
 
 
-def get_emojis(text_entities: dict, author, stats: Stats, stopset: set | str) -> None:
-    if text_entities['type'] == 'plain':
-        for emo in emoji.emoji_list(text_entities['text']):    
-            item_emoji = emo['emoji']
-            stats.emojis[author][item_emoji] += 1
+def get_emojis(text_entity: dict | None, author: str, stats: Stats, stopset: set[str]) -> None:
+    if not isinstance(text_entity, dict):
+        return
 
-        clean = EMOJI_RE.sub(" ", text_entities['text'])
-        clean = PUNCTSYM_RE.sub(" ", clean)
-        clean = clean.casefold()
-        for token in clean.split():
-            if token and token not in stopset:
-                stats.words[author][token] += 1
+    if text_entity.get("type") != "plain":
+        return
+
+    text = text_entity.get("text")
+    if not isinstance(text, str) or not text:
+        return
+
+    for emo in emoji.emoji_list(text):
+        em = emo.get("emoji")
+        if isinstance(em, str) and em:
+            stats.emojis[author][em] += 1
+
+    clean = EMOJI_RE.sub(" ", text)
+    clean = PUNCTSYM_RE.sub(" ", clean)
+    for token in clean.casefold().split():
+        if token and token not in stopset:
+            stats.words[author][token] += 1

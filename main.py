@@ -70,10 +70,11 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
     # analyzing messages
     for msg in messages:
         author = get_author(msg)
+        text_entity = (msg.get("text_entities") or [None])[0]
 
         get_messages(msg, author, stats)
         get_reactions(msg, stats)
-        get_emojis(msg['text_entities'][0], author, stats, stopset)
+        get_emojis(text_entity, author, stats, stopset)
 
     if not stats.messages_total:
         return JSONResponse({
