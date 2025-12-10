@@ -31,7 +31,7 @@ EMOJI_RE = (
 PUNCTSYM_RE: Final[re.Pattern[str]] = re.compile(r"[\p{P}\p{S}]", re.UNICODE)
 
 @app.post('/upload')
-async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> None:
+async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> JSONResponse:
     if file.content_type not in ['application/zip', 'application/json']:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, 
