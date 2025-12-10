@@ -16,6 +16,7 @@ from utils.file import unarchive, aiosave_file
 from utils.detect_lang import detect_lang
 from models.stats_model import Stats
 from functions.export_processing import get_author, get_emojis, get_messages, get_reactions
+from functions.collect_messages import collect_messages
 
 app = FastAPI(debug=True)
 temp_dir = Path(tempfile.TemporaryDirectory().name)
@@ -56,7 +57,7 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
         data = json.load(f)
         
     stats = Stats()
-    messages = data.get('messages', [])
+    messages = collect_messages(data)
     sample_texts = [
         ent.get("text", "")
         for m in messages[:500]
