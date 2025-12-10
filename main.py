@@ -28,8 +28,8 @@ EMOJI_RE = (
 
 PUNCTSYM_RE: Final[re.Pattern[str]] = re.compile(r"[\p{P}\p{S}]", re.UNICODE)
 
-@app.post('/analyze')
-async def analyze_export(file: UploadFile) -> None:
+@app.post('/upload')
+async def _(file: UploadFile) -> None:
     if file.content_type not in ['application/zip', 'application/json']:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, 
