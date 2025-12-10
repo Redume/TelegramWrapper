@@ -53,8 +53,7 @@ def get_reactions(message: dict, stats: Stats) -> None:
                     stats.reactions[reaction_author['from']][reaction['emoji']] += 1
 
 
-def get_emojis(message: dict, author, stats: Stats, stopset: set | str) -> None:
-    text_entities = message['text_entities']
+def get_emojis(text_entities: dict, author, stats: Stats, stopset: set | str) -> None:
     if text_entities['type'] == 'plain':
         for emo in emoji.emoji_list(text_entities['text']):    
             item_emoji = emo['emoji']
