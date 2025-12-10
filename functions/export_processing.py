@@ -17,8 +17,24 @@ def get_author(message: dict) -> str:
     return str(author).strip() if isinstance(author, str) and author.strip() else 'Unknown'
 
 
+def _get_plain_text(message: dict) -> str | None:
+    entities = message.get("text_entities")
+    if not isinstance(entities, list) or not entities:
+        return None
+
+    first = entities[0]
+    if not isinstance(first, dict):
+        return None
+
+    if first.get("type") != "plain":
+        return None
+
+    text = first.get("text")
+    return text if isinstance(text, str) else None
+
+
 def get_messages(message: dict, author: str, stats: Stats) -> None:
-    if not message['text_entities'][0] and ['media_type'] == 'voice_message':
+    if message.get("media_type") == "voice_message" and _get_plain_text(message) is None:
         stats.voice_total[author] += 1
     
     stats.messages_total[author] += 1

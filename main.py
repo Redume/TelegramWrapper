@@ -15,7 +15,7 @@ from stopwordsiso import stopwords as sw_iso
 from utils.file import unarchive, aiosave_file
 from utils.detect_lang import detect_lang
 from models.stats_model import Stats
-from functions.count_data_export import get_author, get_emojis, get_messages, get_reactions
+from functions.export_processing import get_author, get_emojis, get_messages, get_reactions
 
 app = FastAPI(debug=True)
 temp_dir = Path(tempfile.TemporaryDirectory().name)
