@@ -5,6 +5,7 @@ import uuid
 from pathlib import Path
 
 import shutil
+import orjson
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, status, File, BackgroundTasks
@@ -53,8 +54,12 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
     else:
         json_path = src_path
 
-    with open(json_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    try:
+        with open(json_path, 'rb') as f:
+            data = orjson.loads(f.read())
+    except Exception:
+        background_tasks.add_task(shutil.rmtree, work_dir, ignore_errors=True)
+        raise HTTPException(status_code=400, detail="Invalid JSON format")
         
     messages = collect_messages(data)
 
