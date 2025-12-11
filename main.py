@@ -47,10 +47,9 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
         json_path = unarchive(src_path, work_dir)
         if not json_path:
             background_tasks.add_task(shutil.rmtree, work_dir, ignore_errors=True)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="No JSON file (result.json) found in the archive."
-            )
+            return JSONResponse({
+                "message": "No JSON file (result.json) found in the archive."
+            }, status_code=status.HTTP_400_BAD_REQUEST)
     else:
         json_path = src_path
 
@@ -59,13 +58,13 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
             data = orjson.loads(f.read())
     except Exception:
         background_tasks.add_task(shutil.rmtree, work_dir, ignore_errors=True)
-        raise HTTPException(status_code=400, detail="Invalid JSON format")
+        return JSONResponse({"message": "Invalid JSON format"}, status_code=status.HTTP_400_BAD_REQUEST)
         
     messages = collect_messages(data)
 
     if not messages:
         background_tasks.add_task(shutil.rmtree, work_dir, ignore_errors=True)
-        return JSONResponse({"message": "No data available"}, status_code=400)
+        return JSONResponse({"message": "No data available"}, status_code=status.HTTP_400_BAD_REQUEST)
     
     stats = Stats()
 
