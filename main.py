@@ -73,11 +73,9 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
         if not author:
             continue
 
-        text_entity = (msg.get("text_entities") or [None])[0]
-
         get_messages(msg, author, stats)
         get_reactions(msg, stats)
-        get_emojis(text_entity, author, stats)
+        get_emojis(msg, author, stats)
         get_word(msg, author, stats, stopset)
 
     if not stats.messages_total:
@@ -92,16 +90,32 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
                 "messages_total": stats.messages_total[a],
                 "voice_message_total": stats.voice_total[a],
                 "top_emojis": [
-                    {"emoji": e, "value": v}
-                    for e, v in stats.emojis[a].most_common(10)
+                    {
+                        "emoji": emoji_token,
+                        "value": data["value"],
+                        **({"path": data["path"]} if data.get("path") else {})
+                    }
+                    for emoji_token, data in sorted(
+                        stats.emojis[a].items(),
+                        key=lambda x: x[1]["value"],
+                        reverse=True
+                    )[:10]
                 ],
                 "top_words": [
                     {"word": w, "value": v}
                     for w, v in stats.words[a].most_common(10)
                 ],
                 "top_reactions": [
-                    {"emoji": e, "value": v}
-                    for e, v in stats.reactions[a].most_common(10)
+                    {
+                        "emoji": emoji,
+                        "value": data["value"],
+                        **({"path": data["path"]} if data.get("path") else {})
+                    }
+                    for emoji, data in sorted(
+                        stats.reactions[a].items(),
+                        key=lambda x: x[1]["value"],
+                        reverse=True
+                    )[:10]
                 ]
             }
             for a in stats.messages_total

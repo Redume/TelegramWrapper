@@ -42,32 +42,60 @@ def get_messages(message: dict, author: str, stats: Stats) -> None:
 
 def get_reactions(message: dict, stats: Stats) -> None:
     reactions = message.get('reactions')
-    if reactions:
-        for reaction in reactions:
-            if reaction['type'] == 'emoji':
-                reactions_authors = reaction.get('recent', None)
-                if not reactions_authors:
-                    continue
-
-                for reaction_author in reactions_authors:
-                    stats.reactions[reaction_author['from']][reaction['emoji']] += 1
-
-
-def get_emojis(text_entity: dict | None, author: str, stats: Stats) -> None:
-    if not isinstance(text_entity, dict):
+    if not isinstance(reactions, list):
         return
 
-    if text_entity.get("type") != "plain":
+    for reaction in reactions:
+        if not isinstance(reaction, dict):
+            continue
+
+        emoji_token = reaction.get("emoji") or reaction.get("document_id")
+
+        if not emoji_token:
+            continue
+
+        recent = reaction.get("recent") or []
+        for ra in recent:
+            if not isinstance(ra, dict):
+                continue
+            author = ra.get("from") or ra.get("from_id")
+
+            if emoji_token not in stats.reactions[author]:
+                stats.reactions[author][emoji_token] = {
+                    "value": 0,
+                }
+
+            stats.reactions[author][emoji_token]["value"] += 1
+
+
+def get_emojis(message: dict, author: str, stats: Stats) -> None:
+    text_entity = (message.get("text_entities") or [None])[0]
+
+    if not isinstance(text_entity, dict):
+        return
+    if text_entity.get("type") not in ['plain', 'custom_emoji']:
         return
 
     text = text_entity.get("text")
-    if not isinstance(text, str) or not text:
+    path = text_entity.get("document_id", None)
+
+    if not isinstance(text, str):
         return
 
     for emo in emoji.emoji_list(text):
-        em = emo.get("emoji")
-        if isinstance(em, str) and em:
-            stats.emojis[author][em] += 1
+        token = emo.get("emoji")
+        if not token:
+            continue
+
+
+        if token not in stats.emojis[author]:
+            stats.emojis[author][token] = {
+                "value": 0,
+                "path": path
+            }
+
+        stats.emojis[author][token]["value"] += 1
+
 
 def get_word(message: dict, author, stats: Stats, stopset: set[str]) -> None:
     text = _get_plain_text(message)
