@@ -56,8 +56,14 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
     with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
         
-    stats = Stats()
     messages = collect_messages(data)
+
+    if not messages:
+        background_tasks.add_task(shutil.rmtree, work_dir, ignore_errors=True)
+        return JSONResponse({"message": "No data available"}, status_code=400)
+    
+    stats = Stats()
+
     sample_texts = [
         ent.get("text", "")
         for m in messages[:500]
@@ -83,6 +89,7 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
             "message": "No data available for processing"
         }, status_code=status.HTTP_400_BAD_REQUEST)
     
+    background_tasks.add_task(shutil.rmtree, work_dir, ignore_errors=True)
     return JSONResponse({
         "authors": [
             {

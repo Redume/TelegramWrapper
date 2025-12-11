@@ -1,13 +1,23 @@
+import itertools
+
 def collect_messages(data: dict) -> list[dict]:
-    all_messages: list[dict] = []
 
-    for section in ("chats", "left_chats"):
-        chats = data.get(section, {}).get("list", []) or []
-        for chat in chats:
-            if not isinstance(chat, dict):
-                continue
-            for msg in (chat.get("messages") or []):
-                if isinstance(msg, dict):
-                    all_messages.append(msg)
+    chats_list = data.get("chats", {}).get("list")
+    left_chats_list = data.get("left_chats", {}).get("list")
+    
+    if chats_list or left_chats_list:
+        all_messages = []
+        source_lists = (l for l in (chats_list, left_chats_list) if l)
+        
+        for chat_list in source_lists:
+            for chat in chat_list:
+                msgs = chat.get("messages")
+                if msgs and isinstance(msgs, list):
+                    all_messages.extend(msgs)
+        return all_messages
 
-    return all_messages
+    root_msgs = data.get("messages")
+    if root_msgs and isinstance(root_msgs, list):
+        return root_msgs
+
+    return []
