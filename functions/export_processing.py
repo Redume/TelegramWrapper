@@ -65,40 +65,34 @@ def get_reactions(message: dict, stats: Stats) -> None:
             except KeyError:
                 user_stats[emoji_token] = {"value": 1}
 
-
 def get_emojis(message: dict, author: str, stats: Stats) -> None:
-    entities = message.get("text_entities")
-    if not entities:
+    text_entity = (message.get("text_entities") or [None])[0]
+    if not text_entity:
         return
-        
-    text_entity = entities[0]
-    entity_type = text_entity.get("type")
-    
-    if entity_type not in ('plain', 'custom_emoji'):
+
+    if text_entity.get("type") not in ['plain', 'custom_emoji']:
         return
 
     text = text_entity.get("text")
-    if not text:
+    path = text_entity.get("document_id", None)
+
+    if not isinstance(text, str):
         return
 
-    found_emojis = EMOJI_FINDER.findall(text)
-    
-    if not found_emojis:
-        return
+    for emo in emoji.emoji_list(text):
+        token = emo.get("emoji")
+        if not token:
+            continue
 
-    author_emojis = stats.emojis[author]
-    path = text_entity.get("document_id")
-
-    for token in found_emojis:
-        try:
-            author_emojis[token]["value"] += 1
-        except KeyError:
-             author_emojis[token] = {
-                "value": 1,
+        if token not in stats.emojis[author]:
+            stats.emojis[author][token] = {
+                "value": 0,
                 "path": path
             }
 
-
+        stats.emojis[author][token]["value"] += 1
+                 
+    
 def get_word(message: dict, author: str, stats: Stats, stopset: Set[str]) -> None:
     text = _get_plain_text(message)
     if not text:
