@@ -89,11 +89,6 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
         get_word(msg, author, stats, stopset)
 
     background_tasks.add_task(shutil.rmtree, work_dir, ignore_errors=True)
-
-    if not stats.messages_total:        
-        return JSONResponse({
-            "message": "No data available for processing"
-        }, status_code=status.HTTP_400_BAD_REQUEST)
     
     return JSONResponse({
         "authors": [
