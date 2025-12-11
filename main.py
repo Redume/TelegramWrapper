@@ -1,3 +1,4 @@
+from ast import Continue
 import tempfile
 import uuid
 
@@ -15,7 +16,7 @@ from stopwordsiso import stopwords as sw_iso
 from utils.file import unarchive, aiosave_file
 from utils.detect_lang import detect_lang
 from models.stats_model import Stats
-from functions.export_processing import get_author, get_emojis, get_messages, get_reactions, get_word
+from functions.export_processing import get_author, get_emojis, get_messages, get_reactions, get_word, get_bot_names
 from functions.collect_messages import collect_messages
 
 app = FastAPI(debug=True)
@@ -59,7 +60,8 @@ async def _(background_tasks: BackgroundTasks, file: UploadFile = File(...)) -> 
         background_tasks.add_task(shutil.rmtree, work_dir, ignore_errors=True)
         return JSONResponse({"message": "Invalid JSON format"}, status_code=status.HTTP_400_BAD_REQUEST)
         
-    messages = collect_messages(data)
+    bot_names = get_bot_names(data)
+    messages = collect_messages(data, bot_names)
 
     if not messages:
         background_tasks.add_task(shutil.rmtree, work_dir, ignore_errors=True)

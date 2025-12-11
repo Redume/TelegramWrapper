@@ -1,3 +1,4 @@
+import itertools
 import regex as re
 import emoji
 from typing import Final, Set
@@ -16,6 +17,19 @@ def get_author(message: dict) -> str | None:
         return s if not s.startswith(' ') and not s.endswith(' ') else s.strip()
     return None
 
+def get_bot_names(data: dict) -> set[str]:
+    bot_names = set()
+    
+    chats = data.get("chats", {}).get("list") or []
+    left_chats = data.get("left_chats", {}).get("list") or []
+    
+    for chat in itertools.chain(chats, left_chats):
+        if chat.get("type") == "bot_chat":
+            name = chat.get("name")
+            if name:
+                bot_names.add(name)
+                
+    return bot_names
 
 def _get_plain_text(message: dict) -> str | None:
 
