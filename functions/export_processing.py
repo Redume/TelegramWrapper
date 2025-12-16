@@ -7,15 +7,24 @@ from models.stats_model import Stats
 
 NON_WORD_RE: Final = re.compile(r"[^\w\s]+", re.UNICODE | re.VERSION1)
 
-EMOJI_FINDER = emoji.get_emoji_regexp() if hasattr(emoji, "get_emoji_regexp") else re.compile(r"\p{Emoji}", re.UNICODE)
+EMOJI_FINDER = (
+    emoji.get_emoji_regexp()
+    if hasattr(emoji, "get_emoji_regexp")
+    else re.compile(r"\p{Emoji}", re.UNICODE)
+)
 
+def get_author(msg: dict) -> str | None:
+    if not isinstance(msg, dict):
+        return None
 
-def get_author(message: dict) -> str | None:
-    val = message.get("from")
-    if val:
-        s = str(val)
-        return s if not s.startswith(' ') and not s.endswith(' ') else s.strip()
-    return None
+    if msg.get("type") != "message":
+        return None
+
+    return (
+        msg.get("from")
+        or msg.get("actor")
+        or msg.get("author")
+    )
 
 def get_bot_names(data: dict) -> set[str]:
     bot_names = set()
@@ -31,12 +40,11 @@ def get_bot_names(data: dict) -> set[str]:
                 
     return bot_names
 
-def _get_plain_text(message: dict) -> str | None:
 
+def _get_plain_text(message: dict) -> str | None:
     entities = message.get("text_entities")
     if entities:
         first = entities[0]
-
         if first.get("type") == "plain":
             return first.get("text")
     return None
@@ -51,15 +59,12 @@ def get_messages(message: dict, author: str, stats: Stats) -> None:
 
 
 def get_reactions(message: dict, stats: Stats) -> None:
-    reactions = message.get('reactions')
+    reactions = message.get("reactions")
     if not reactions:
         return
 
-    all_reactions_stats = stats.reactions
-
     for reaction in reactions:
         emoji_token = reaction.get("emoji") or reaction.get("document_id")
-        
         if not emoji_token:
             continue
 
@@ -72,51 +77,112 @@ def get_reactions(message: dict, stats: Stats) -> None:
             if not user_id:
                 continue
 
-            user_stats = all_reactions_stats[user_id]
+            reaction_stats = stats.reactions[user_id][emoji_token]
+            reaction_stats["value"] += 1
 
-            try:
-                user_stats[emoji_token]["value"] += 1
-            except KeyError:
-                user_stats[emoji_token] = {"value": 1}
 
 def get_emojis(message: dict, author: str, stats: Stats) -> None:
-    text_entity = (message.get("text_entities") or [None])[0]
-    if not text_entity:
+    entities = message.get("text_entities") or []
+    if not entities:
         return
 
-    if text_entity.get("type") not in ['plain', 'custom_emoji']:
-        return
-
-    text = text_entity.get("text")
-    path = text_entity.get("document_id", None)
-
-    if not isinstance(text, str):
-        return
-
-    for emo in emoji.emoji_list(text):
-        token = emo.get("emoji")
-        if not token:
+    for ent in entities:
+        if ent.get("type") not in ("plain", "custom_emoji"):
             continue
 
-        if token not in stats.emojis[author]:
-            stats.emojis[author][token] = {
-                "value": 0,
-                "path": path
-            }
+        text = ent.get("text")
+        if not isinstance(text, str):
+            continue
 
-        stats.emojis[author][token]["value"] += 1
-                 
-    
+        path = ent.get("document_id")
+
+        for emo in emoji.emoji_list(text):
+            token = emo.get("emoji")
+            if not token:
+                continue
+
+            e = stats.emojis[author][token]
+            e["value"] += 1
+
+            if path:
+                e["path"] = path
+
+
 def get_word(message: dict, author: str, stats: Stats, stopset: Set[str]) -> None:
     text = _get_plain_text(message)
     if not text:
         return
 
     clean_text = NON_WORD_RE.sub(" ", text).casefold()
-    
-
     author_words_counter = stats.words[author]
     
     for token in clean_text.split():
         if token not in stopset:
             author_words_counter[token] += 1
+
+
+def format_authors(stats: Stats) -> list[dict]:
+    authors_arr = []
+    for author_name in stats.messages_total.keys():
+        authors_arr.append({
+            "name": author_name,
+            "messages_total": stats.messages_total[author_name],
+            "voice_message_total": stats.voice_total[author_name],
+            "top_emojis": [
+                {
+                    "emoji": e,
+                    "value": d["value"],
+                    **({"path": d["path"]} if d.get("path") else {})
+                }
+                for e, d in sorted(
+                    stats.emojis[author_name].items(),
+                    key=lambda x: x[1]["value"],
+                    reverse=True
+                )[:10]
+            ],
+            "top_words": [
+                {"word": w, "value": v}
+                for w, v in stats.words[author_name].most_common(10)
+            ],
+            "top_reactions": [
+                {
+                    "emoji": e,
+                    "value": d["value"],
+                    **({"path": d["path"]} if d.get("path") else {})
+                }
+                for e, d in sorted(
+                    stats.reactions[author_name].items(),
+                    key=lambda x: x[1]["value"],
+                    reverse=True
+                )[:10]
+            ],
+        })
+    return authors_arr
+
+
+def get_top_dialogs(messages: list[dict], owner: str) -> list[dict]:
+    if not owner or not messages:
+        return []
+    
+    owner_chats = {}
+    for msg in messages:
+        if msg.get("from") != owner:
+            continue
+
+        cid = msg.get("chat_id")
+        cname = msg.get("chat_name") or "Unknown chat"
+
+        if cid not in owner_chats:
+            owner_chats[cid] = {
+                "chat_id": cid,
+                "name": cname,
+                "messages_from_owner": 0,
+            }
+
+        owner_chats[cid]["messages_from_owner"] += 1
+
+    return sorted(
+        owner_chats.values(),
+        key=lambda x: x["messages_from_owner"],
+        reverse=True
+    )[:5]
