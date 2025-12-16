@@ -1,35 +1,41 @@
-import itertools
+from typing import List, Set
+from utils.fail_safe import safe_get, safe_list, safe_dict, get_author
 
+def collect_messages(data: dict, ignored_authors: Set[str]) -> List[dict]:
+    messages: List[dict] = []
 
-def collect_messages(data: dict, ignored_authors: set[str]) -> list[dict]:
-    chats_list = data.get("chats", {}).get("list")
-    left_chats_list = data.get("left_chats", {}).get("list")
-    
-    if chats_list or left_chats_list:
-        all_messages = []
-        source_lists = (l for l in (chats_list, left_chats_list) if l)
-        
-        for chat in itertools.chain.from_iterable(source_lists):
-            msgs = chat.get("messages")
-            
-            if msgs and isinstance(msgs, list):
-                filtered = [
-                    msg for msg in msgs 
-                    if isinstance(msg, dict) 
-                    and msg.get("type") != "service"
-                    and msg.get("from") not in ignored_authors
-                ]
-                all_messages.extend(filtered)
-                
-        return all_messages
+    chats_list = safe_list(data.get("chats", {}).get("list"))
+    left_chats_list = safe_list(data.get("left_chats", {}).get("list"))
 
-    root_msgs = data.get("messages")
-    if root_msgs and isinstance(root_msgs, list):
-        return [
-            msg for msg in root_msgs 
-            if isinstance(msg, dict) 
-            and msg.get("type") != "service"
-            and msg.get("from") not in ignored_authors
-        ]
+    for chat in chats_list + left_chats_list:
+        chat_type = safe_get(chat, "type", "unknown")
+        chat_id = safe_get(chat, "id")
+        chat_name = safe_get(chat, "name") or safe_get(chat, "title") or "Unknown chat"
+        msgs = safe_list(chat.get("messages"))
+        for msg in msgs:
+            if not isinstance(msg, dict):
+                continue
+            if msg.get("type") == "service":
+                continue
+            author = get_author(msg)
+            if author in ignored_authors:
+                continue
+            msg["chat_id"] = chat_id
+            msg["chat_name"] = chat_name
+            msg["chat_type"] = chat_type
+            messages.append(msg)
 
-    return []
+    for msg in safe_list(data.get("messages")):
+        if not isinstance(msg, dict):
+            continue
+        if msg.get("type") == "service":
+            continue
+        author = get_author(msg)
+        if author in ignored_authors:
+            continue
+        msg["chat_id"] = None
+        msg["chat_name"] = None
+        msg["chat_type"] = "saved_messages"
+        messages.append(msg)
+
+    return messages
